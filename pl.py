@@ -89,5 +89,5 @@ if __name__ == '__main__':
         filename=('pe' if pe else 'vanilla') + '-{epoch:03d}-{val_loss:.2f}' 
     )
 
-    trainer = pl.Trainer(gpus=-1, max_epochs=200, callbacks=[checkpoint_callback])
+    trainer = pl.Trainer(gpus=-1, max_epochs=100, callbacks=[checkpoint_callback])
     trainer.fit(model, trainloader, testloader)
