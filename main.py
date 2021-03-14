@@ -19,6 +19,7 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
+parser.add_argument('--pe', default=1, type=int)
 args = parser.parse_args()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -66,12 +67,12 @@ print('==> Building model..')
 # net = ShuffleNetG2()
 # net = SENet18()
 # net = ShuffleNetV2(1)
-# net = EfficientNetB0()
+net = EfficientNetB0(pe)
 # net = RegNetX_200MF()
-net = SimpleDLA()
+# net = SimpleDLA()
 net = net.to(device)
 if device == 'cuda':
-    net = torch.nn.DataParallel(net)
+    # net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
 
 if args.resume:

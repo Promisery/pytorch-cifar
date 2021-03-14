@@ -104,10 +104,30 @@ class Block(nn.Module):
         return out
 
 
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)[:, :1]
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
+
 class EfficientNet(nn.Module):
     def __init__(self, cfg, num_classes=10):
         super(EfficientNet, self).__init__()
         self.cfg = cfg
+        self.pe = PositionalEncoding(3) if cfg['pe'] == 1 else None
         self.conv1 = nn.Conv2d(3,
                                32,
                                kernel_size=3,
@@ -140,6 +160,14 @@ class EfficientNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        
+        if self.pe is not None:
+            bs, c, h, w = x.shape
+            x = x.permute(2, 3, 0, 1).reshape(h*w, bs, c)
+            x = self.pe(x)
+            x = x.reshape(h, w, bs, c).permute(2, 3, 0, 1)
+            
+        
         out = swish(self.bn1(self.conv1(x)))
         out = self.layers(out)
         out = F.adaptive_avg_pool2d(out, 1)
@@ -151,8 +179,9 @@ class EfficientNet(nn.Module):
         return out
 
 
-def EfficientNetB0():
+def EfficientNetB0(pe):
     cfg = {
+        'pe': pe,
         'num_blocks': [1, 2, 2, 3, 3, 4, 1],
         'expansion': [1, 6, 6, 6, 6, 6, 6],
         'out_channels': [16, 24, 40, 80, 112, 192, 320],
