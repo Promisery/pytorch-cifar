@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, random_split
 import torchvision
 from torchvision import transforms
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 from models.resnet import ResNet18
 import argparse
@@ -22,7 +23,7 @@ class Model(pl.LightningModule):
         super().__init__()
         self.net = ResNet18(pe)
         self.lr = 0.1
-        self.wd = 1e-5
+        self.wd = 5e-4
 
     def forward(self, x):
         # in lightning, forward defines the prediction/inference actions
@@ -73,5 +74,12 @@ testloader = torch.utils.data.DataLoader(
 
 model = Model(args.pe)
 
-trainer = pl.Trainer(gpus=-1, max_epochs=100)
+checkpoint_callback = ModelCheckpoint(
+    monitor='val_loss',
+    dirpath='ckpt',
+    save_top_k=1,
+    filename='resnet18-{epoch:03d}-{val_loss:.2f}'
+)
+
+trainer = pl.Trainer(gpus=-1, max_epochs=200, callbacks=[checkpoint_callback])
 trainer.fit(model, trainloader, testloader)
