@@ -22,7 +22,7 @@ class Model(pl.LightningModule):
         self.log('pe', pe)
         # self.net = ResNet18(pe)
         self.net = MobileNetV2(pe)
-        self.lr = 0.1
+        self.lr = 1e-3
         self.wd = 5e-4
 
     def forward(self, x):
@@ -46,7 +46,7 @@ class Model(pl.LightningModule):
         self.log('val_loss', loss)
 
     def configure_optimizers(self):
-        optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=0.9, weight_decay=self.wd, nesterov=True)
+        optimizer = optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.wd) #optim.SGD(self.parameters(), lr=self.lr, momentum=0.9, weight_decay=self.wd, nesterov=True)
         scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr=self.lr, epochs=200, steps_per_epoch=391)
         scheduler = {"scheduler": scheduler, "interval" : "step" }
         return {'optimizer':optimizer, 'lr_scheduler':scheduler}
