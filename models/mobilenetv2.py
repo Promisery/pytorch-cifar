@@ -6,6 +6,7 @@ Mobile Networks for Classification, Detection and Segmentation" for more details
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 
 class Block(nn.Module):
@@ -36,6 +37,24 @@ class Block(nn.Module):
         out = out + self.shortcut(x) if self.stride==1 else out
         return out
 
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)[:, :1]
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
 
 class MobileNetV2(nn.Module):
     # (expansion, out_planes, num_blocks, stride)
@@ -47,9 +66,12 @@ class MobileNetV2(nn.Module):
            (6, 160, 3, 2),
            (6, 320, 1, 1)]
 
-    def __init__(self, num_classes=10):
+    def __init__(self, pe=0, num_classes=10):
         super(MobileNetV2, self).__init__()
         # NOTE: change conv1 stride 2 -> 1 for CIFAR10
+        
+        self.pe = PositionalEncoding(3) if pe == 1 else None
+        
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(32)
         self.layers = self._make_layers(in_planes=32)
@@ -67,6 +89,13 @@ class MobileNetV2(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        
+        if self.pe is not None:
+            bs, c, h, w = x.shape
+            x = x.permute(2, 3, 0, 1).reshape(h*w, bs, c)
+            x = self.pe(x)
+            x = x.reshape(h, w, bs, c).permute(2, 3, 0, 1)
+            
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layers(out)
         out = F.relu(self.bn2(self.conv2(out)))

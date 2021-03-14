@@ -10,6 +10,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from models.resnet import ResNet18
+from models.mobilenetv2 import MobileNetV2
 import argparse
 
 
@@ -19,7 +20,8 @@ class Model(pl.LightningModule):
         super().__init__()
         self.pe = pe
         self.log('pe', pe)
-        self.net = ResNet18(pe)
+        # self.net = ResNet18(pe)
+        self.net = MobileNetV2(pe)
         self.lr = 0.1
         self.wd = 5e-4
 
@@ -45,7 +47,7 @@ class Model(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=0.9, weight_decay=self.wd, nesterov=True)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
         return {'optimizer':optimizer, 'lr_scheduler':scheduler}
 
 
@@ -86,8 +88,8 @@ if __name__ == '__main__':
         dirpath='ckpt',
         save_last=True,
         save_top_k=1,
-        filename=('pe' if pe else 'vanilla') + '-{epoch:03d}-{val_loss:.2f}' 
+        filename='mobilenetv2-' + ('pe' if pe else 'vanilla') + '-{epoch:03d}-{val_loss:.2f}' 
     )
 
-    trainer = pl.Trainer(gpus=-1, max_epochs=100, callbacks=[checkpoint_callback])
+    trainer = pl.Trainer(gpus=-1, max_epochs=200, callbacks=[checkpoint_callback])
     trainer.fit(model, trainloader, testloader)

@@ -133,24 +133,24 @@ class ResNet(nn.Module):
         return out
 
 
-def ResNet18(pe):
+def ResNet18(pe=0):
     return ResNet(BasicBlock, [2, 2, 2, 2], pe=pe)
 
 
-def ResNet34():
-    return ResNet(BasicBlock, [3, 4, 6, 3])
+def ResNet34(pe=0):
+    return ResNet(BasicBlock, [3, 4, 6, 3], pe=pe)
 
 
-def ResNet50():
-    return ResNet(Bottleneck, [3, 4, 6, 3])
+def ResNet50(pe=0):
+    return ResNet(Bottleneck, [3, 4, 6, 3], pe=pe)
 
 
-def ResNet101():
-    return ResNet(Bottleneck, [3, 4, 23, 3])
+def ResNet101(pe=0):
+    return ResNet(Bottleneck, [3, 4, 23, 3], pe=pe)
 
 
-def ResNet152():
-    return ResNet(Bottleneck, [3, 8, 36, 3])
+def ResNet152(pe=0):
+    return ResNet(Bottleneck, [3, 8, 36, 3], pe=pe)
 
 
 def test():
