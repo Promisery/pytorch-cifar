@@ -70,10 +70,30 @@ class Bottleneck(nn.Module):
         return out
 
 
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)[:, :1]
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10):
+    def __init__(self, block, num_blocks, num_classes=10, pe=0):
         super(ResNet, self).__init__()
         self.in_planes = 64
+        
+        self.pe = PositionalEncoding(3) if pe == 1 else None
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
                                stride=1, padding=1, bias=False)
@@ -93,6 +113,14 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        
+        if self.pe is not None:
+            bs, c, h, w = x.shape
+            x = x.permute(2, 3, 0, 1).reshape(h*w, bs, c)
+            x = self.pe(x)
+            x = x.reshape(h, w, bs, c).permute(2, 3, 0, 1)
+            
+            
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
@@ -104,8 +132,8 @@ class ResNet(nn.Module):
         return out
 
 
-def ResNet18():
-    return ResNet(BasicBlock, [2, 2, 2, 2])
+def ResNet18(pe):
+    return ResNet(BasicBlock, [2, 2, 2, 2], pe=pe)
 
 
 def ResNet34():
