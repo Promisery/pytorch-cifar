@@ -84,6 +84,7 @@ if __name__ == '__main__':
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
         dirpath='ckpt',
+        save_last=True,
         save_top_k=1,
         filename=('pe' if pe else 'vanilla') + '-{epoch:03d}-{val_loss:.2f}' 
     )
