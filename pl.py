@@ -9,6 +9,13 @@ from torchvision import transforms
 import pytorch_lightning as pl
 
 from models.resnet import ResNet18
+import argparse
+
+parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
+parser.add_argument('--pe', default=0, type=int)
+args = parser.parse_args()
+
+pl.seed_everything(990121)
 
 class Model(pl.LightningModule):
     def __init__(self, pe=0):
@@ -25,21 +32,21 @@ class Model(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop. It is independent of forward
         x, y = batch
-        x_hat = self.encoder(x)
-        loss = F.cross_entropy(x_hat, x)
+        x_hat = self.net(x)
+        loss = F.cross_entropy(x_hat, y)
         self.log('train_loss', loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         # training_step defined the train loop. It is independent of forward
         x, y = batch
-        x_hat = self.encoder(x)
-        loss = F.cross_entropy(x_hat, x)
+        x_hat = self.net(x)
+        loss = F.cross_entropy(x_hat, y)
         self.log('val_loss', loss)
 
     def configure_optimizers(self):
         optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=0.9, weight_decay=self.wd, nesterov=True)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
         return {'optimizer':optimizer, 'lr_scheduler':scheduler}
 
 transform_train = transforms.Compose([
@@ -64,7 +71,7 @@ testset = torchvision.datasets.CIFAR10(
 testloader = torch.utils.data.DataLoader(
     testset, batch_size=100, shuffle=False, num_workers=0)
 
-model = Model()
+model = Model(args.pe)
 
-trainer = pl.Trainer(gpus=-1)
+trainer = pl.Trainer(gpus=-1, max_epochs=100)
 trainer.fit(model, trainloader, testloader)
